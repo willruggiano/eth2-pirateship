@@ -39,7 +39,7 @@ class Eth2PirateshipStack(Stack):
                 ])
 
         container = task_definition.add_container(
-                'pirate',
+                'barbosa',
                 image=ecs.ContainerImage.from_registry('sigp/lighthouse'),  # TODO: configurable
                 command=[
                     '--network pyrmont beacon',
