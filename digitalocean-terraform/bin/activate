@@ -1,0 +1,3 @@
+# vi: ft=zsh
+export DIGITALOCEAN_TOKEN=$(pass meta digitalocean.com/ethereumpirates@gmail.com token | head -n1)
+
