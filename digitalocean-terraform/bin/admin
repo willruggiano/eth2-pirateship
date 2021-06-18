@@ -1,0 +1,158 @@
+#!/bin/zsh
+
+
+function die() {
+    echo "$1"
+    exit 1
+}
+
+COMMAND="help"
+SUBCOMMAND=""
+DRYRUN=false
+NODE_NAME="$NODE_NAME"
+NODE_HOST="$NODE_HOST"
+INFURA_URL="https://mainnet.infura.io/v3/c90d5df6bff84e6b9c588beb56386752"
+
+for a in "$@"; do
+    case "$a" in
+        --dryrun)
+            DRYRUN=true; shift
+            ;;
+        --node)
+            shift; NODE_NAME="$1"; shift
+            ;;
+        --host)
+            shift; NODE_HOST="$1"; shift
+            ;;
+        --infura)
+            shift; INFURA_URL="$1"; shift
+            ;;
+        docker)
+            COMMAND="docker"; shift
+            ;;
+        geth)
+            COMMAND="geth"; shift
+            ;;
+        grafana)
+            COMMAND="grafana"; shift
+            ;;
+        prom)
+            COMMAND="prometheus"; shift
+            for p in "$@"; do
+                case "$p" in
+                    --prometheus-config)
+                        shift; PROMETHEUS_CONFIG="$1"; shift
+                        ;;
+                    install)
+                        SUBCOMMAND="install"; shift
+                        ;;
+                    run)
+                        SUBCOMMAND="run"; shift
+                        ;;
+                    logs)
+                        SUBCOMMAND="logs"; shift
+                        ;;
+                esac
+            done
+            ;;
+        --)
+            shift; OPTIONS="$@"; break
+            ;;
+    esac
+done
+
+CONTEXT="docker"
+if [[ -n "$NODE_NAME" ]]; then
+    DOCKER_CMD="docker --context $NODE_NAME"
+elif [[ -z "$DOCKER_CONTEXT" ]] && [[ -z "$DOCKER_HOST" ]]; then
+    echo "Must specify a node (via --node), or set the NODE_NAME environment variable, or configure Docker via either DOCKER_CONTEXT or DOCKER_HOST"
+    exit 1
+fi
+
+help() {
+    echo "usage: [geth|prysm] ..."
+}
+
+logs() {
+    local command="$DOCKER_CMD logs $1 $OPTIONS"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        eval $command
+    fi
+}
+
+docker() {
+    local command="$DOCKER_CMD $OPTIONS"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        eval $command
+    fi
+}
+
+geth() {
+    local command="$DOCKER_CMD run -it --restart always -p 30303:30303 -v /root/.eth1:/root/.ethereum ethereum/client-go:stable --syncmode light --http --pcscdpath \"\""
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        eval $command
+    fi
+}
+
+prysm() {
+    local command="$DOCKER_CMD run --name beacon-node -it --restart always -p 4000:4000 -p 13000:13000 -p 12000:12000/udp -v /root/.eth1:/geth -v /mnt/beaconchain:/data gcr.io/prysmaticlabs/prysm/beacon-chain:stable --accept-terms-of-use --datadir /data --rpc-host 0.0.0.0 --monitoring-host 0.0.0.0 --http-web3provider /geth/geth.ipc --fallback-web3provider $INFURA_URL --mainnet"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        eval $command
+    fi
+}
+
+prometheus_install() {
+    [[ -z "$NODE_HOST" ]] || [[ ! -f "$PROMETHEUS_CONFIG" ]] && die "--host or NODE_HOST must be specified, along with --prometheus-config"
+    local command="scp $(readlink -f $PROMETHEUS_CONFIG) root@$NODE_HOST:/root/.prometheus/prometheus.yml"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        eval "ssh root@$NODE_HOST mkdir -p /root/.prometheus"
+        eval $command
+    fi
+}
+
+prometheus_run() {
+    local command="$DOCKER_CMD run --name prometheus -it --restart always -p 9090:9090 -v /root/.prometheus:/etc/prometheus prom/prometheus"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        eval $command
+    fi
+}
+
+prometheus_logs() {
+    logs "prometheus"
+}
+
+prometheus() {
+    [[ -z "$SUBCOMMAND" ]] && die "usage: prom <subcommand> [options...]"
+    eval "prometheus_$SUBCOMMAND"
+}
+
+grafana() {
+    local command="$DOCKER_CMD run -d --name grafana -p 3000:3000 grafana/grafana"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo $command
+    else
+        eval $command
+    fi
+}
+
+$COMMAND
+
