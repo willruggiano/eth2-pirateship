@@ -7,10 +7,13 @@ function die() {
 }
 
 COMMAND="help"
-SUBCOMMAND=""
+SUBCOMMAND="help"
+SUBSUBCOMMAND="help"
+HELP=false
 DRYRUN=false
 NODE_NAME="$NODE_NAME"
 NODE_HOST="$NODE_HOST"
+USE_TESTNET=false
 INFURA_URL="https://mainnet.infura.io/v3/c90d5df6bff84e6b9c588beb56386752"
 
 for a in "$@"; do
@@ -18,25 +21,77 @@ for a in "$@"; do
         --dryrun)
             DRYRUN=true; shift
             ;;
+        --testnet)
+            shift; USE_TESTNET=true
+            ;;
         --node)
             shift; NODE_NAME="$1"; shift
             ;;
         --host)
             shift; NODE_HOST="$1"; shift
             ;;
-        --infura)
-            shift; INFURA_URL="$1"; shift
+        --help|-h)
+            shift; HELP=true
             ;;
         docker)
-            COMMAND="docker"; shift
+            COMMAND="docker_cmd"; shift
             ;;
         geth)
             COMMAND="geth"; shift
+            for ge in "$@"; do
+                case "$ge" in
+                    attach)
+                        SUBCOMMAND="attach"; shift
+                        ;;
+                    logs)
+                        SUBCOMMAND="logs"; shift
+                        ;;
+                    run)
+                        SUBCOMMAND="run"; shift
+                        ;;
+                esac
+            done
+            ;;
+        prysm)
+            COMMAND="prysm"; shift
+            for py in "$@"; do
+                case "$py" in
+                    beacon)
+                        SUBCOMMAND="beacon"; shift
+                        for b in "$@"; do
+                            case "$b" in
+                                --infura)
+                                    shift; INFURA_URL="$2"; shift
+                                    ;;
+                                run)
+                                    SUBSUBCOMMAND="run"; shift
+                                    ;;
+                                logs)
+                                    SUBSUBCOMMAND="logs"; shift
+                                    ;;
+                            esac
+                        done
+                        ;;
+                    validator)
+                        SUBCOMMAND="validator"; shift
+                        ;;
+                esac
+            done
             ;;
         grafana)
             COMMAND="grafana"; shift
+            for gr in "$@"; do
+                case "$gr" in
+                    logs)
+                        SUBCOMMAND="logs"; shift
+                        ;;
+                    run)
+                        SUBCOMMAND="run"; shift
+                        ;;
+                esac
+            done
             ;;
-        prom)
+        prometheus)
             COMMAND="prometheus"; shift
             for p in "$@"; do
                 case "$p" in
@@ -69,8 +124,14 @@ elif [[ -z "$DOCKER_CONTEXT" ]] && [[ -z "$DOCKER_HOST" ]]; then
     exit 1
 fi
 
+##### Helper Functions #####
+
+usage() {
+    echo "usage: ./admin [--node <name>] [--host <hostname>] $1"
+}
+
 help() {
-    echo "usage: [geth|prysm] ..."
+    usage "[geth | prysm | prometheus | grafana | docker] ..."
 }
 
 logs() {
@@ -83,34 +144,112 @@ logs() {
     fi
 }
 
-docker() {
+##### Subcommands #####
+
+docker_cmd() {
     local command="$DOCKER_CMD $OPTIONS"
     if $DRYRUN; then
         echo "Would run:"
         echo "$command"
+    elif $HELP; then
+        usage "docker ..."
+    else
+        eval $command
+    fi
+}
+
+geth_help() {
+    usage "geth [run | logs]"
+}
+
+geth_logs() {
+    logs "geth"
+}
+
+geth_attach() {
+    local command="$DOCKER_CMD run --rm -it -v /root/.eth1:/root/.ethereum ethereum/client-go:stable attach"
+    if $USE_TESTNET; then
+        command="$command ipc:///root/.ethereum/goerli/geth.ipc"
+    fi
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    elif $HELP; then
+        usage "geth attach"
+    else
+        eval $command
+    fi
+}
+
+geth_run() {
+    local command="$DOCKER_CMD run -it --restart always -p 30303:30303 -v /root/.eth1:/root/.ethereum ethereum/client-go:stable --syncmode light --http --pcscdpath \"\""
+    if $USE_TESTNET; then
+        command="$command --goerli"
+    fi
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    elif $HELP; then
+        usage "geth run"
     else
         eval $command
     fi
 }
 
 geth() {
-    local command="$DOCKER_CMD run -it --restart always -p 30303:30303 -v /root/.eth1:/root/.ethereum ethereum/client-go:stable --syncmode light --http --pcscdpath \"\""
+    eval "geth_$SUBCOMMAND"
+}
+
+prysm_beacon_run() {
+    local geth_path="/geth/geth.ipc"
+    if $USE_TESTNET; then
+        geth_path="/geth/goerli/geth.ipc"
+    fi
+    local command="$DOCKER_CMD run --name beacon-node -it --restart always -p 4000:4000 -p 13000:13000 -p 12000:12000/udp -v /root/.eth1:/geth -v /mnt/beaconchain:/data gcr.io/prysmaticlabs/prysm/beacon-chain:stable --accept-terms-of-use --datadir /data --rpc-host 0.0.0.0 --monitoring-host 0.0.0.0 --http-web3provider $geth_path --fallback-web3provider $INFURA_URL"
+    if $USE_TESTNET; then
+        command="$command --${CHAIN:-prater} --genesis-state /data/eth2-networks/shared/${CHAIN:-prater}/genesis.ssz"
+    fi
     if $DRYRUN; then
         echo "Would run:"
         echo "$command"
+    elif $HELP; then
+        usage "prysm beacon run [--infura-url <url>]"
     else
         eval $command
     fi
 }
 
+prysm_beacon_logs() {
+    logs "beacon-node"
+}
+
+prysm_beacon_help() {
+    usage "prysm beacon [run]"
+}
+
+prysm_beacon() {
+    eval "prysm_${SUBCOMMAND}_${SUBSUBCOMMAND}"
+}
+
+prysm_validator_logs() {
+    logs "validator"
+}
+
+prysm_validator_help() {
+    echo "prysm validator ..."
+}
+
+prysm_validator() {
+    echo "Not implemented yet!"
+    exit 1
+}
+
+prysm_help() {
+    usage "prysm [beacon | validator]"
+}
+
 prysm() {
-    local command="$DOCKER_CMD run --name beacon-node -it --restart always -p 4000:4000 -p 13000:13000 -p 12000:12000/udp -v /root/.eth1:/geth -v /mnt/beaconchain:/data gcr.io/prysmaticlabs/prysm/beacon-chain:stable --accept-terms-of-use --datadir /data --rpc-host 0.0.0.0 --monitoring-host 0.0.0.0 --http-web3provider /geth/geth.ipc --fallback-web3provider $INFURA_URL --mainnet"
-    if $DRYRUN; then
-        echo "Would run:"
-        echo "$command"
-    else
-        eval $command
-    fi
+    eval "prysm_$SUBCOMMAND"
 }
 
 prometheus_install() {
@@ -119,6 +258,8 @@ prometheus_install() {
     if $DRYRUN; then
         echo "Would run:"
         echo "$command"
+    elif $HELP; then
+        usage "prometheus install [--prometheus-config <path>]"
     else
         eval "ssh root@$NODE_HOST mkdir -p /root/.prometheus"
         eval $command
@@ -130,6 +271,8 @@ prometheus_run() {
     if $DRYRUN; then
         echo "Would run:"
         echo "$command"
+    elif $HELP; then
+        usage "prometheus run"
     else
         eval $command
     fi
@@ -139,19 +282,32 @@ prometheus_logs() {
     logs "prometheus"
 }
 
+prometheus_help() {
+    usage "prometheus [install --prometheus-config <path> | run | help]"
+}
+
 prometheus() {
-    [[ -z "$SUBCOMMAND" ]] && die "usage: prom <subcommand> [options...]"
     eval "prometheus_$SUBCOMMAND"
 }
 
-grafana() {
-    local command="$DOCKER_CMD run -d --name grafana -p 3000:3000 grafana/grafana"
+grafana_run() {
+    local command="$DOCKER_CMD run --name grafana -d --restart always -p 3000:3000 grafana/grafana"
     if $DRYRUN; then
         echo "Would run:"
         echo $command
+    elif $HELP; then
+        usage "grafana run"
     else
         eval $command
     fi
+}
+
+grafana_help() {
+    usage "grafana [run]"
+}
+
+grafana() {
+    eval "grafana_$SUBCOMMAND"
 }
 
 $COMMAND
