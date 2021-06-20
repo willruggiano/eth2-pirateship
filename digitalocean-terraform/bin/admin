@@ -1,7 +1,6 @@
 #!/bin/zsh
 
-
-function die() {
+die() {
     echo "$1"
     exit 1
 }
@@ -15,6 +14,8 @@ NODE_NAME="$NODE_NAME"
 NODE_HOST="$NODE_HOST"
 USE_TESTNET=false
 INFURA_URL="https://mainnet.infura.io/v3/c90d5df6bff84e6b9c588beb56386752"
+CREATE_WALLET=true
+KEYS_DIR=""
 
 for a in "$@"; do
     case "$a" in
@@ -74,6 +75,22 @@ for a in "$@"; do
                         ;;
                     validator)
                         SUBCOMMAND="validator"; shift
+                        for v in "$@"; do
+                            case "$v" in
+                                --no-create-wallet)
+                                    CREATE_WALLET=false; shift
+                                    ;;
+                                --keys-dir)
+                                    shift; KEYS_DIR="$1"; shift
+                                    ;;
+                                init)
+                                    SUBSUBCOMMAND="init"; shift
+                                    ;;
+                                run)
+                                    SUBSUBCOMMAND="run"; shift
+                                    ;;
+                            esac
+                        done
                         ;;
                 esac
             done
@@ -231,6 +248,69 @@ prysm_beacon() {
     eval "prysm_${SUBCOMMAND}_${SUBSUBCOMMAND}"
 }
 
+prysm_wallet_create() {
+    local command="$DOCKER_CMD --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/data:/data gcr.io/prysmaticlabs/prysm/validator:stable wallet create --wallet-dir /wallet --accept-terms-of-use"
+    if $USE_TESTNET; then
+        command="$command --${CHAIN:-prater}"
+    fi
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    elif $HELP; then
+        usage "prysm validator init"
+    else
+        eval $command
+    fi
+}
+
+prysm_account_import() {
+    [[ ! -d "$KEYS_DIR" ]] || [[ -z "$NODE_HOST" ]] && die "--host or NODE_HOST along with --keys-dir are required"
+    local mkdir_command="ssh root@$NODE_HOST mkdir -p /root/.eth2/"
+    local scp_command="scp -r $(readlink -f $KEYS_DIR) root@$NODE_HOST:/root/.eth2/validator_keys"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$mkdir_command"
+        echo "$scp_command"
+    else
+        eval $mkdir_command
+        eval $scp_command
+    fi
+    local command="$DOCKER_CMD --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/validator_keys:/keys gcr.io/prysmaticlabs/prysm/validator:stable accounts import --keys-dir /keys --wallet-dir /wallet"
+    if $USE_TESTNET; then
+        command="$command --${CHAIN:-prater}"
+    fi
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    elif $HELP; then
+        usage "prysm account import"
+    else
+        eval $command
+    fi
+}
+
+prysm_validator_init() {
+    if $CREATE_WALLET; then
+        prysm_wallet_create
+    fi
+    prysm_account_import
+}
+
+prysm_validator_run() {
+    local command="$DOCKER_CMD run --name validator -it --restart always -v /root/.eth2/wallet:/wallet -v /root/.eth2/data:/data --network host gcr.io/prysmaticlabs/prysm/validator:stable --beacon-rpc-provider 127.0.0.1:4000 --wallet-dir /wallet --datadir /data --accept-terms-of-use"
+    if $USE_TESTNET; then
+        command="$command --${CHAIN:-prater}"
+    fi
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    elif $HELP; then
+        usage "prysm validator run"
+    else
+        eval $command
+    fi
+}
+
 prysm_validator_logs() {
     logs "validator"
 }
@@ -240,8 +320,7 @@ prysm_validator_help() {
 }
 
 prysm_validator() {
-    echo "Not implemented yet!"
-    exit 1
+    eval "prysm_${SUBCOMMAND}_${SUBSUBCOMMAND}"
 }
 
 prysm_help() {
