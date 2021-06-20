@@ -222,7 +222,7 @@ prysm_beacon_run() {
     if $USE_TESTNET; then
         geth_path="/geth/goerli/geth.ipc"
     fi
-    local command="$DOCKER_CMD run --name beacon-node -it --restart always -p 4000:4000 -p 13000:13000 -p 12000:12000/udp -v /root/.eth1:/geth -v /mnt/beaconchain:/data gcr.io/prysmaticlabs/prysm/beacon-chain:stable --accept-terms-of-use --datadir /data --rpc-host 0.0.0.0 --monitoring-host 0.0.0.0 --http-web3provider $geth_path --fallback-web3provider $INFURA_URL"
+    local command="$DOCKER_CMD run --name beacon-node -it --restart always -p 4000:4000 -p 13000:13000 -p 12000:12000/udp -v /root/.eth1:/geth -v /mnt/beaconchain:/data gcr.io/prysmaticlabs/prysm/beacon-chain:stable --accept-terms-of-use --datadir /data --rpc-host 0.0.0.0 --monitoring-host 0.0.0.0 --http-web3provider $geth_path --fallback-web3provider $INFURA_URL --accept-terms-of-use"
     if $USE_TESTNET; then
         command="$command --${CHAIN:-prater} --genesis-state /data/eth2-networks/shared/${CHAIN:-prater}/genesis.ssz"
     fi
@@ -275,7 +275,7 @@ prysm_account_import() {
         eval $mkdir_command
         eval $scp_command
     fi
-    local command="$DOCKER_CMD --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/validator_keys:/keys gcr.io/prysmaticlabs/prysm/validator:stable accounts import --keys-dir /keys --wallet-dir /wallet"
+    local command="$DOCKER_CMD --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/validator_keys:/keys gcr.io/prysmaticlabs/prysm/validator:stable accounts import --keys-dir /keys --wallet-dir /wallet --accept-terms-of-use"
     if $USE_TESTNET; then
         command="$command --${CHAIN:-prater}"
     fi
