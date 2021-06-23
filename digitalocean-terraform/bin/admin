@@ -203,7 +203,7 @@ docker_cmd() {
 }
 
 geth_help() {
-    usage "geth [run | logs]"
+    usage "geth [attach | logs | run]"
 }
 
 geth_logs() {
@@ -268,7 +268,7 @@ prysm_beacon_logs() {
 }
 
 prysm_beacon_help() {
-    usage "prysm beacon [run]"
+    usage "prysm beacon [logs | run]"
 }
 
 prysm_beacon() {
@@ -366,7 +366,7 @@ prysm_validator_logs() {
 }
 
 prysm_validator_help() {
-    echo "prysm validator [init | run]"
+    echo "prysm validator [exec | init | logs | run | tunnel]"
 }
 
 prysm_validator() {
