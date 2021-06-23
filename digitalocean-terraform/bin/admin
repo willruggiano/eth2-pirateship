@@ -226,7 +226,7 @@ geth_attach() {
 }
 
 geth_run() {
-    local command="$DOCKER_CMD run -it --restart always -p 30303:30303 -v /root/.eth1:/root/.ethereum ethereum/client-go:stable --syncmode light --http --pcscdpath \"\""
+    local command="$DOCKER_CMD run --name geth -it --restart always -p 30303:30303 -v /root/.eth1:/root/.ethereum ethereum/client-go:stable --syncmode light --http --pcscdpath \"\""
     if $USE_TESTNET; then
         command="$command --goerli"
     fi
