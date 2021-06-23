@@ -21,10 +21,11 @@ runcmd:
   - add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
   - apt-get update -y
   - apt-get install -y docker-ce docker-ce-cli containerd.io
-  - docker pull ethereum/client-go
-  - docker pull gcr.io/prysmaticlabs/prysm/validator:stable
-  - docker pull gcr.io/prysmaticlabs/prysm/beacon-chain:stable
-
-final_message: "===== Finished droplet initialization ====="
+  - echo "===== Mounting block storage volume ====="
+  - mkfs.ext4 /dev/disk/by-id/scsi-0DO_Volume_${beaconchain_volume_name}
+  - mkdir -p /mnt/beaconchain
+  - mount -o discard,defaults,noatime /dev/disk/by-id/scsi-0DO_Volume_${beaconchain_volume_name} /mnt/beaconchain
+  - echo '/dev/disk/by-id/scsi-0DO_Volume_${beaconchain_volume_name} /mnt/beaconchain ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
+  - echo "===== Finished droplet initialization ====="
 
 # vi: ft=yaml

@@ -31,6 +31,12 @@ for a in "$@"; do
         --host)
             shift; NODE_HOST="$1"; shift
             ;;
+        --local-port)
+            shift; LOCAL_PORT="$1"; shift
+            ;;
+        --remote-port)
+            shift; REMOTE_PORT="$2"; shift
+            ;;
         --help|-h)
             shift; HELP=true
             ;;
@@ -94,6 +100,9 @@ for a in "$@"; do
                                     ;;
                                 exec)
                                     SUBSUBCOMMAND="exec"; shift
+                                    ;;
+                                tunnel)
+                                    SUBSUBCOMMAND="tunnel"; shift
                                     ;;
                             esac
                         done
@@ -163,6 +172,18 @@ logs() {
         echo "Would run:"
         echo "$command"
     else
+        eval $command
+    fi
+}
+
+tunnel() {
+    [[ -z "$1" ]] || [[ -z "$2" ]] || [[ -z "$3" ]] && die "--local-port, --remote-port, and --host (or NODE_HOST) are required"
+    local command="ssh -TNL ${1}:localhost:${2} root@${3}"
+    if $DRYRUN; then
+        echo "Would run:"
+        echo "$command"
+    else
+        echo "Tunneling to ${3}:${1}... press Ctrl-C to close"
         eval $command
     fi
 }
@@ -255,7 +276,7 @@ prysm_beacon() {
 }
 
 prysm_wallet_create() {
-    local command="$DOCKER_CMD --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/data:/data gcr.io/prysmaticlabs/prysm/validator:stable wallet create --wallet-dir /wallet --accept-terms-of-use"
+    local command="$DOCKER_CMD run --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/data:/data gcr.io/prysmaticlabs/prysm/validator:stable wallet create --wallet-dir /wallet --accept-terms-of-use"
     if $USE_TESTNET; then
         command="$command --${CHAIN:-prater}"
     fi
@@ -281,7 +302,7 @@ prysm_account_import() {
         eval $mkdir_command
         eval $scp_command
     fi
-    local command="$DOCKER_CMD --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/validator_keys:/keys gcr.io/prysmaticlabs/prysm/validator:stable accounts import --keys-dir /keys --wallet-dir /wallet --accept-terms-of-use"
+    local command="$DOCKER_CMD run --rm -it -v /root/.eth2/wallet:/wallet -v /root/.eth2/validator_keys:/keys gcr.io/prysmaticlabs/prysm/validator:stable accounts import --keys-dir /keys --wallet-dir /wallet --accept-terms-of-use"
     if $USE_TESTNET; then
         command="$command --${CHAIN:-prater}"
     fi
@@ -329,6 +350,14 @@ prysm_validator_exec() {
         usage "prysm validator exec -- ..."
     else
         eval $command
+    fi
+}
+
+prysm_validator_tunnel() {
+    if $HELP; then
+        usage "prysm validator tunnel [--local-port] [--remote-port]"
+    else
+        tunnel ${LOCAL_PORT:-7500} ${REMOTE_PORT:-7500} $NODE_HOST
     fi
 }
 
