@@ -324,7 +324,7 @@ prysm_validator_init() {
 }
 
 prysm_validator_run() {
-    local command="$DOCKER_CMD run --name validator -it --restart always -v /root/.eth2/wallet:/wallet -v /root/.eth2/data:/data --network host gcr.io/prysmaticlabs/prysm/validator:stable --beacon-rpc-provider 127.0.0.1:4000 --wallet-dir /wallet --datadir /data --web --accept-terms-of-use"
+    local command="$DOCKER_CMD run --name validator -it --restart always -v ethereum-wallet:/wallet -v /root/.eth2/data:/data --network host gcr.io/prysmaticlabs/prysm/validator:stable --beacon-rpc-provider 127.0.0.1:4000 --wallet-dir /wallet --write-wallet-password-on-web-onboarding --datadir /data --web --accept-terms-of-use"
     if $USE_TESTNET; then
         command="$command --${CHAIN:-prater}"
     fi
