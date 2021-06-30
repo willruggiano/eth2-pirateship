@@ -4,8 +4,22 @@ package_update: true
 package_upgrade: false
 package_reboot_if_required: false
 
+groups:
+  - docker
+
 users:
   - default
+  - name: ethereum
+    lock_passwd: true
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${barbosa_ssh_key}
+      - ${blackbeard_ssh_key}
+      - ${ljs_ssh_key}
+    groups:
+      - sudo
+      - docker
+    sudo: ALL=(ALL) NOPASSWD:ALL
 
 packages:
   - unattended-upgrades
@@ -15,22 +29,26 @@ packages:
   - curl
   - gnupg-agent
   - software-properties-common
+  - ntp
 
 runcmd:
   - echo "===== Starting droplet initialization ====="
-  - echo "===== Configuring unattended upgrades ====="
-  - sed '/-updates\|-backports\|Remove-/s#^//##; /Remove-/s#false#true#; /\/\//d; /^$/d; /Black/,/};/d' "/etc/apt/apt.conf.d/50unattended-upgrades" | tee "/etc/apt/apt.conf.d/51unattended-upgrades_on"
-  - cat "/etc/apt/apt.conf.d/10periodic" "/etc/apt/apt.conf.d/20auto-upgrades" 2>/dev/null | sed "s/0/1/" | sort -u | tee  "/etc/apt/apt.conf.d/21periodic-auto-upgrades_on"
-  - timedatectl set-ntp on
+  - echo "===== Installing docker ====="
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
   - add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
   - apt-get update -y
-  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  - apt-get install -y docker-ce docker-ce-cli docker-compose containerd.io
   - echo "===== Mounting block storage volume ====="
-  - mkfs.ext4 /dev/disk/by-id/scsi-0DO_Volume_${beaconchain_volume_name}
-  - mkdir -p /mnt/beaconchain
-  - mount -o discard,defaults,noatime /dev/disk/by-id/scsi-0DO_Volume_${beaconchain_volume_name} /mnt/beaconchain
-  - echo '/dev/disk/by-id/scsi-0DO_Volume_${beaconchain_volume_name} /mnt/beaconchain ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
+  - mkfs.ext4 /dev/disk/by-id/scsi-0DO_Volume_${eth2_mount_name}
+  - mkfs.ext4 /dev/disk/by-id/scsi-0DO_Volume_${eth1_mount_name}
+  - mkdir -p /mnt/${eth2_mount_name}
+  - mkdir -p /mnt/${eth1_mount_name}
+  - mount -o discard,defaults,noatime /dev/disk/by-id/scsi-0DO_Volume_${eth2_mount_name} /mnt/${eth2_mount_name}
+  - mount -o discard,defaults,noatime /dev/disk/by-id/scsi-0DO_Volume_${eth1_mount_name} /mnt/${eth1_mount_name}
+  - echo '/dev/disk/by-id/scsi-0DO_Volume_${eth2_mount_name} /mnt/${eth2_mount_name} ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
+  - echo '/dev/disk/by-id/scsi-0DO_Volume_${eth1_mount_name} /mnt/${eth1_mount_name} ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
+  - chown ethereum:ethereum /mnt/${eth2_mount_name}
+  - chown ethereum:ethereum /mnt/${eth1_mount_name}
   - echo "===== Finished droplet initialization ====="
 
 # vi: ft=yaml

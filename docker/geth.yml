@@ -31,7 +31,9 @@ services:
     stop_grace_period: 3m
     image: geth:local
     volumes:
-      - geth:/var/lib/geth
+      - type: bind
+        source: /mnt/eth1
+        target: /var/lib/geth
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
@@ -47,7 +49,4 @@ services:
   eth:
     depends_on:
       - geth
-
-volumes:
-  geth:
 

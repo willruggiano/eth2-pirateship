@@ -28,7 +28,9 @@ services:
     image: prysm-beacon:local
     stop_grace_period: 1m
     volumes:
-      - beaconchain:/var/lib/prysm
+      - type: bind
+        source: /mnt/beaconchain
+        target: /var/lib/prysm
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
@@ -74,9 +76,4 @@ services:
       - validator
 
 volumes:
-  beaconchain:
-    driver: local
-    driver_opts:
-      device: ${BEACON_DATA_MOUNT_PATH}
-      o: "${BEACON_DATA_MOUNT_OPTIONS}"
   validator:
