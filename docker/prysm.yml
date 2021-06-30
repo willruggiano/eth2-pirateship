@@ -16,7 +16,7 @@ services:
       - --grpc-gateway-host
       - 0.0.0.0
       - --http-web3provider
-      - geth:8545
+      - http://geth:8545
       - --fallback-web3provider
       - ${INFURA_URL}
       - --eth1-header-req-limit

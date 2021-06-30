@@ -41,10 +41,11 @@ runcmd:
   - curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod +x /usr/local/bin/docker-compose
   - echo "===== Mounting block storage volume ====="
+  - docker volume create ethereum
   - mkfs.ext4 /dev/disk/by-id/scsi-0DO_Volume_${docker_mount_name}
-  - mkdir -p /var/lib/docker/volumes/docker_ethereum
-  - mount -o discard,defaults,noatime /dev/disk/by-id/scsi-0DO_Volume_${docker_mount_name} /var/lib/docker/volumes/docker_ethereum
-  - echo '/dev/disk/by-id/scsi-0DO_Volume_${docker_mount_name} /mnt/${docker_mount_name} ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
+  - mkdir -p /var/lib/docker/volumes/docker_ethereum/_data/
+  - mount -o discard,defaults,noatime /dev/disk/by-id/scsi-0DO_Volume_${docker_mount_name} /var/lib/docker/volumes/docker_ethereum/_data
+  - echo '/dev/disk/by-id/scsi-0DO_Volume_${docker_mount_name} /var/lib/docker/volumes/docker_ethereum/_data ext4 defaults,nofail,discard 0 0' | sudo tee -a /etc/fstab
   - echo "===== Finished droplet initialization ====="
 
 # vi: ft=yaml
