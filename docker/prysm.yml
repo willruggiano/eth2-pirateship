@@ -15,6 +15,8 @@ services:
       - 0.0.0.0
       - --grpc-gateway-host
       - 0.0.0.0
+      - --monitoring-host
+      - 0.0.0.0
       - --http-web3provider
       - http://geth:8545
       - --fallback-web3provider
@@ -36,6 +38,7 @@ services:
       - 13000:13000/tcp
     expose:
       - 4000
+      - 8080/tcp
 
   validator:
     restart: 'unless-stopped'
@@ -51,7 +54,9 @@ services:
       - --wallet-dir
       - /var/lib/prysm
       - --beacon-rpc-provider
-      - beacon:4500
+      - http://beacon:4500
+      - --monitoring-host
+      - 0.0.0.0
       - --graffiti
       - ${GRAFFITY}
       - --write-wallet-password-on-web-onboarding
@@ -64,6 +69,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     ports:
       - 7500:7500/tcp
+    expose:
+      - 8081/tcp
     depends_on:
       - beacon
 
