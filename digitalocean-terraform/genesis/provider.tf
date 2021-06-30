@@ -29,9 +29,7 @@ resource "digitalocean_droplet" "node" {
   ssh_keys = [
     data.digitalocean_ssh_key.barbosa-ssh-key.id
   ]
-  user_data = templatefile("${path.module}/../common/cloud-init.yaml", {
-    beaconchain_volume_name = "beaconchain"
-  })
+  user_data = file("${path.module}/../common/cloud-init.yaml")
 }
 
 resource "digitalocean_volume_attachment" "node" {

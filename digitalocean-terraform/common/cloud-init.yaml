@@ -8,6 +8,8 @@ users:
   - default
 
 packages:
+  - unattended-upgrades
+  - ssmtp
   - apt-transport-https
   - ca-certificates
   - curl
@@ -16,6 +18,9 @@ packages:
 
 runcmd:
   - echo "===== Starting droplet initialization ====="
+  - echo "===== Configuring unattended upgrades ====="
+  - sed '/-updates\|-backports\|Remove-/s#^//##; /Remove-/s#false#true#; /\/\//d; /^$/d; /Black/,/};/d' "/etc/apt/apt.conf.d/50unattended-upgrades" | tee "/etc/apt/apt.conf.d/51unattended-upgrades_on"
+  - cat "/etc/apt/apt.conf.d/10periodic" "/etc/apt/apt.conf.d/20auto-upgrades" 2>/dev/null | sed "s/0/1/" | sort -u | tee  "/etc/apt/apt.conf.d/21periodic-auto-upgrades_on"
   - timedatectl set-ntp on
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
   - add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"

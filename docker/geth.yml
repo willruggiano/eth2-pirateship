@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  geth:
+    restart: 'unless-stopped'
+    build:
+      context: ./geth
+      args:
+        - TAG=${GETH_TAG}
+    entrypoint:
+      - geth
+      - --http
+      - --http.addr
+      - 0.0.0.0
+      - --http.vhosts=*
+      - --http.api
+      - web3,eth,net
+      - --datadir
+      - /var/lib/geth
+      - --ws
+      - --ws.addr
+      - 0.0.0.0
+      - --ws.api
+      - web3,eth,net
+      - --syncmode
+      - light
+      - --pcscdpath
+      - ""
+      - --${ETH1_NETWORK}
+    stop_signal: SIGINT
+    stop_grace_period: 3m
+    image: geth:local
+    volumes:
+      - geth:/var/lib/geth
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 30303:30303/tcp
+      - 30303:30303/udp
+    expose:
+      - 8545/tcp  # HTTP RPC port
+      - 8546/tcp  # WS RPC port
+    networks:
+      default:
+        aliases:
+          - eth1
+  eth:
+    depends_on:
+      - geth
+
+volumes:
+  geth:
+
