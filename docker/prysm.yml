@@ -28,9 +28,7 @@ services:
     image: prysm-beacon:local
     stop_grace_period: 1m
     volumes:
-      - type: bind
-        source: /mnt/beaconchain
-        target: /var/lib/prysm
+      - ethereum:/var/lib/prysm
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
@@ -47,6 +45,7 @@ services:
         - TAG=${PRYSM_TAG}
     entrypoint:
       - validator
+      - --web
       - --datadir
       - /var/lib/prysm
       - --wallet-dir
@@ -55,14 +54,12 @@ services:
       - beacon:4500
       - --graffiti
       - ${GRAFFITY}
-      - --wallet-password-file
-      - /var/lib/prysm/password.txt
       - --write-wallet-password-on-web-onboarding
       - --${NETWORK}
       - --accept-terms-of-use
     image: prysm-validator:local
     volumes:
-      - validator:/var/lib/prysm
+      - ethereum:/var/lib/prysm
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     depends_on:
@@ -76,4 +73,4 @@ services:
       - validator
 
 volumes:
-  validator:
+  ethereum:

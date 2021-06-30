@@ -21,18 +21,11 @@ data "digitalocean_ssh_key" "ljs" {
   name = "ljs"
 }
 
-resource "digitalocean_volume" "beaconchain" {
+resource "digitalocean_volume" "docker" {
   region      = "nyc1"
-  name        = "beaconchain"
-  size        = 100
-  description = "file system storage for beacon-chain data"
-}
-
-resource "digitalocean_volume" "eth1" {
-  region      = "nyc1"
-  name        = "eth1"
-  size        = 100
-  description = "file system storage for eth1 chain data"
+  name        = "docker"
+  size        = 1000
+  description = "file system storage for docker volume data"
 }
 
 resource "digitalocean_droplet" "node" {
@@ -50,19 +43,13 @@ resource "digitalocean_droplet" "node" {
     barbosa_ssh_key    = data.digitalocean_ssh_key.barbosa.public_key,
     blackbeard_ssh_key = data.digitalocean_ssh_key.blackbeard.public_key,
     ljs_ssh_key        = data.digitalocean_ssh_key.ljs.public_key,
-    eth2_mount_name    = "beaconchain",
-    eth1_mount_name    = "eth1"
+    docker_mount_name  = "docker",
   })
 }
 
-resource "digitalocean_volume_attachment" "eth2" {
+resource "digitalocean_volume_attachment" "node" {
   droplet_id = digitalocean_droplet.node.id
-  volume_id  = digitalocean_volume.beaconchain.id
-}
-
-resource "digitalocean_volume_attachment" "eth1" {
-  droplet_id = digitalocean_droplet.node.id
-  volume_id  = digitalocean_volume.eth1.id
+  volume_id  = digitalocean_volume.docker.id
 }
 
 output "instance_ip_addr" {
