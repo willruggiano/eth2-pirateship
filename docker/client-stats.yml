@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  client-stats:
+    restart: 'unless-stopped'
+    build:
+      context: ./client-stats
+    command:
+      - --validator-metrics-url
+      - http://validator:8081/metrics
+      - --beacon-node-metrics-url
+      - http://beacon:8080/metrics
+      - --clientstats-api-url
+      - https://beaconcha.in/api/v1/stats/${BEACONCHAIN_STATS_API}
+    image: client-stats:local
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - beacon
+      - validator
+  eth:
+    depends_on:
+      - client-stats
+

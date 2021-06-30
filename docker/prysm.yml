@@ -18,8 +18,8 @@ services:
       - --monitoring-host
       - 0.0.0.0
       - --http-web3provider
-      - http://geth:8545
-      - --fallback-web3provider
+      # - http://geth:8545
+      # - --fallback-web3provider
       - ${INFURA_URL}
       - --eth1-header-req-limit
       - ${PRYSM_ETH1_HEADER_REQ_LIMIT}
@@ -49,17 +49,19 @@ services:
     entrypoint:
       - validator
       - --web
+      - --grpc-gateway-host
+      - 0.0.0.0
       - --datadir
       - /var/lib/prysm
       - --wallet-dir
       - /var/lib/prysm
+      - write-wallet-password-on-web-onboarding
       - --beacon-rpc-provider
-      - http://beacon:4500
+      - beacon:4000
       - --monitoring-host
       - 0.0.0.0
       - --graffiti
-      - ${GRAFFITY}
-      - --write-wallet-password-on-web-onboarding
+      - ${GRAFFITI}
       - --${NETWORK}
       - --accept-terms-of-use
     image: prysm-validator:local
