@@ -4,9 +4,6 @@ FROM ethereum/client-go:${TAG}
 ARG USER=geth
 ARG UID=10001
 
-# So we can switch to non-root user if started as root
-RUN apk add --no-cache su-exec ca-certificates bash tzdata
-
 RUN adduser \
     --disabled-password \
     --gecos "" \
@@ -14,9 +11,7 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-RUN mkdir -p /var/lib/geth && chown ${USER}:${USER} /var/lib/geth
+RUN mkdir -p /var/lib/geth && chown -R ${USER}:${USER} /var/lib/geth
 
-COPY ./docker-entrypoint.sh /usr/local/bin/
-
-ENTRYPOINT ["docker-entrypoint.sh", "geth"]
+USER ${USER}
 

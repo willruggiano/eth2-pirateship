@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  beacon:
+    restart: 'unless-stopped'
+    build:
+      context: ./prysm/beacon
+      args:
+        - TAG=${PRYSM_TAG}
+    entrypoint:
+      - beacon-chain
+      - --datadir
+      - /var/lib/prysm
+      - --rpc-host
+      - 0.0.0.0
+      - --grpc-gateway-host
+      - 0.0.0.0
+      - --http-web3provider
+      - geth:8545
+      - --fallback-web3provider
+      - ${INFURA_URL}
+      - --eth1-header-req-limit
+      - ${PRYSM_ETH1_HEADER_REQ_LIMIT}
+      - --p2p-max-peers
+      - ${PRYSM_P2P_MAX_PEERS}
+      - --${NETWORK}
+      - --accept-terms-of-use
+    image: prysm-beacon:local
+    stop_grace_period: 1m
+    volumes:
+      - beaconchain:/var/lib/prysm
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 12000:12000/udp
+      - 13000:13000/tcp
+    expose:
+      - 4000
+
+  validator:
+    restart: 'unless-stopped'
+    build:
+      context: ./prysm/validator
+      args:
+        - TAG=${PRYSM_TAG}
+    entrypoint:
+      - validator
+      - --datadir
+      - /var/lib/prysm
+      - --wallet-dir
+      - /var/lib/prysm
+      - --beacon-rpc-provider
+      - beacon:4500
+      - --graffiti
+      - ${GRAFFITY}
+      - --wallet-password-file
+      - /var/lib/prysm/password.txt
+      - --write-wallet-password-on-web-onboarding
+      - --${NETWORK}
+      - --accept-terms-of-use
+    image: prysm-validator:local
+    volumes:
+      - validator:/var/lib/prysm
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - beacon
+
+  eth:
+    image: tianon/true
+    restart: 'no'
+    depends_on:
+      - beacon
+      - validator
+
+volumes:
+  beaconchain:
+    driver: local
+    driver_opts:
+      device: ${BEACON_DATA_MOUNT_PATH}
+      o: "${BEACON_DATA_MOUNT_OPTIONS}"
+  validator:

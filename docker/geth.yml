@@ -1,14 +1,13 @@
-version: 3.4
+version: '3.8'
 
 services:
   geth:
-    restart: unless-stopped
+    restart: 'unless-stopped'
     build:
       context: ./geth
       args:
-        - TAG=stable
+        - TAG=${GETH_TAG}
     entrypoint:
-      - docker-entrypoint.sh
       - geth
       - --http
       - --http.addr
@@ -16,15 +15,18 @@ services:
       - --http.vhosts=*
       - --http.api
       - web3,eth,net
+      - --datadir
+      - /var/lib/geth
       - --ws
       - --ws.addr
       - 0.0.0.0
       - --ws.api
-      - web3,eth,api
-      - --syncmode light
-      - --pcscdpath ""
-      - --datadir /var/lib/geth
-      - --
+      - web3,eth,net
+      - --syncmode
+      - light
+      - --pcscdpath
+      - ""
+      - --${ETH1_NETWORK}
     stop_signal: SIGINT
     stop_grace_period: 3m
     image: geth:local
@@ -36,8 +38,8 @@ services:
       - 30303:30303/tcp
       - 30303:30303/udp
     expose:
-      - 8545:8545/tcp  # HTTP RPC port
-      - 8546:8546/tcp  # WS RPC port
+      - 8545/tcp  # HTTP RPC port
+      - 8546/tcp  # WS RPC port
     networks:
       default:
         aliases:
