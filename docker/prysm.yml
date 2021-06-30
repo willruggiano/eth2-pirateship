@@ -62,6 +62,8 @@ services:
       - ethereum:/var/lib/prysm
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 7500:7500/tcp
     depends_on:
       - beacon
 
